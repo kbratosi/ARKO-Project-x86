@@ -1,43 +1,52 @@
 #include "f.hpp"
 #include <iostream>
+#include <cmath>
+
 const int BPP = 4;
 
-void f( unsigned char *pBuffer, int W, int H, int A, int B, int C, int D, int S ) {
-	for( int i = 0; i < H; ++i ) {
-		for( int j = 0; j < W; ++j ) {
-			pBuffer[4*i*W + 4*j] = 255;
-			pBuffer[4*i*W + 4*j + 1] = 255;
-			pBuffer[4*i*W + 4*j + 2] = 255;
-		}
-	}
-	for( int j = 0; j < W; ++j ) {
-		pBuffer[4*W*(H/2) + 4*j] = 0;
-		pBuffer[4*W*(H/2) + 4*j + 1] = 0;
-		pBuffer[4*W*(H/2) + 4*j + 2] = 0;
-		pBuffer[4*W*j + 4*(W/2)] = 0;
-		pBuffer[4*W*j + 4*(W/2) + 1] = 0;
-		pBuffer[4*W*j + 4*(W/2) + 2] = 0;
-	}
-	double x = 0;
-	double y;
-	int row, column, mem_x = -1, mem_y, delta_x2, delta_y2;
-	//
-	for ( int i = 0; i < W; ++i ) {
-		x = 4 * (double) i / W - 2;
+void f( unsigned char *pBuffer, int W, int H, float A, float B, float C, float D, float S ) {
+	bool out;
+	int id_x = 0, id_y, dx = -1;
+	float x = -4, y, step;
+	step = 8.0/W;
+	std::cout << "step: " << step << std::endl;
+	while( dx < 0 && !out ) {
 		y = A*x*x*x + B*x*x + C*x + D;
-		if( y <= 4 && y >= -4 ) {
-			row = static_cast<int>( ( (y + 4) / 8 ) * H );
-			delta_x2 = (i - mem_x)*(i - mem_x);
-			delta_y2 = (row - mem_y)*(row - mem_y);
-			if( mem_x == -1 || (delta_x2 + delta_y2 > S) ) {
-				column = i - 1;
-				pBuffer[BPP * (W * row + column) + 0] = 255;
-				pBuffer[BPP * (W * row + column) + 1] = 0;
-				pBuffer[BPP * (W * row + column) + 2] = 0;
-				pBuffer[BPP * (W * row + column) + 3] = 0;
-				//
-				mem_x = column;
-				mem_y = row;
+		std::cout << "y = " << y << std::endl;
+		if( y > 4 || y < -4 ) {
+			++id_x;
+			x += step;
+		}
+		else {
+			dx = 0;
+			id_y = (int)( (y + 4)/8 * H );
+			pBuffer[BPP * (W * id_y + id_x)] = 255;
+			pBuffer[BPP * (W * id_y + id_x) + 1] = 0;
+			pBuffer[BPP * (W * id_y + id_x) + 2] = 0;
+			pBuffer[BPP * (W * id_y + id_x) + 3] = 0;
+		}
+		if ( x >= 4)
+			out = true;
+	}
+	while( !out ) {
+		dx = round( sqrt( S / (pow( (3*A*x*x + 2*B*x + C), 2 ) + 1) ) );
+		std::cout << "dx = " << dx << std::endl;
+		if( 0 == dx )
+			dx = 1;
+
+		id_x += dx;
+		x += dx*step;
+		if( x >= 4 )
+			out = true;
+		else {
+			y = A*x*x*x + B*x*x + C*x + D;
+			std::cout << "x = " << x << ", y = " << y << std::endl;
+			if( y <= 4 && y >= -4 ) {
+				id_y = (int)( (y + 4)/8 * H );
+				pBuffer[BPP * (W * id_y + id_x)] = 255;
+				pBuffer[BPP * (W * id_y + id_x) + 1] = 0;
+				pBuffer[BPP * (W * id_y + id_x) + 2] = 0;
+				pBuffer[BPP * (W * id_y + id_x) + 3] = 0;
 			}
 		}
 	}

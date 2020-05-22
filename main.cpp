@@ -4,19 +4,33 @@
 #include "f.hpp"
 
 // Image buffer
-const int H = 511, W = 511, BPP = 4;
-unsigned char *g_pBuffer = 0;
+const int H = 512, W = 512, BPP = 4;
+unsigned char *g_pBuffer;
 
 // Algorithm params
-int g_period = W / 5;
+float g_period = 10;
 
-char *openPNGFile( char* fileName ) {
-	std::fstream png;
-	png.open( fileName, std::fstream::binary )
+void refresh() {
+	for( int i = 0; i < H; ++i ) {
+		for( int j = 0; j < W; ++j ) {
+			g_pBuffer[4*i*W + 4*j] = 255;
+			g_pBuffer[4*i*W + 4*j + 1] = 255;
+			g_pBuffer[4*i*W + 4*j + 2] = 255;
+		}
+	}
+	for( int j = 0; j < W; ++j ) {
+		g_pBuffer[4*W*(H/2) + 4*j] = 0;
+		g_pBuffer[4*W*(H/2) + 4*j + 1] = 0;
+		g_pBuffer[4*W*(H/2) + 4*j + 2] = 0;
+		g_pBuffer[4*W*j + 4*(W/2)] = 0;
+		g_pBuffer[4*W*j + 4*(W/2) + 1] = 0;
+		g_pBuffer[4*W*j + 4*(W/2) + 2] = 0;
+	}
 }
 
 void redraw() {
-	f( g_pBuffer, W, H, 1, 1, 1, -2, g_period );
+	refresh();
+	f( g_pBuffer, W, H, 1, 0, 0, 0, g_period );
 	glDrawPixels( W, H, GL_RGBA, GL_UNSIGNED_BYTE, g_pBuffer );
 	glutSwapBuffers();
 }
@@ -27,13 +41,13 @@ void displayCallback() {
 }
 
 void keyboardCallback( unsigned char key, int x, int y ) {
-	int period;
+	float period;
 	if( 'p' == key ) {
-		period = g_period - 10;
+		period = g_period - 1;
 	} else if ( 'P' == key ) {
-		period = g_period + 10;
+		period = g_period + 1;
 	}
-	if( ( period != g_period ) && ( period > 0 ) && ( period <= ( W/2 ) ) ) {
+	if( ( period != g_period ) && ( period > 0 ) && ( period <= 1000 ) ) {
 		g_period = period;
 	
 		redraw();
