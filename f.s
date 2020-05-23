@@ -5,71 +5,73 @@ f:
 	push rbp
 	mov rbp, rsp
 
-	; arguments location
-	; rdi	 	, rsi		, rdx		, rcx 		, r8 		, r9
-	; pBuffer	, W			, H			, X			, Y			, dummy0	, period
-	;	 		, [rbp -32]	, [rbp - 24], [rbp - 16], [rbp - 8] , 			, [rbp + 16]
+; arguments location
+; rdi 		, rsi		, rdx		, rcx 		, r8		, r9
+; pBuffer	, W			, H			, A			, B			, C			, D			, S			
+;	 		, [rbp - 40], [rbp - 32], [rbp - 24], [rbp - 16], [rbp - 8] , [rbp + 16], [rbp + 24]
 
-	sub rsp, 40	; alloc 5 stack variables
+; registers used
+; r8 - x
+; r9 - dx, pix_x in drawing
+; r10 - y, pix_y in drawing
 
-	mov [rbp - 8], r8	; Y (point)
-	mov [rbp - 16], rcx	; X (point)
-	mov [rbp - 24], rdx	; H (height)
-	mov [rbp - 32], rsi	; W (width)
+; alloc 6 stack variables
+	sub rsp, 48
 
-	mov r10, 0		; y (row iterator)
+	mov [rbp - 8], r9	; C
+	mov [rbp - 16], r8	; B
+	mov [rbp - 24], rcx	; A
+	mov [rbp - 32], rdx	; H (height)
+	mov [rbp - 40], rsi	; W (width)
 
-loop_y:
-	mov r11, 0		; x (column iterator)
+; load initial value to x
+	mov r8, -2
+	mov [rbp - 48], r8
 
-	mov [rbp - 40], r10
-	fild QWORD [rbp - 40]	; load y
-	fild QWORD [rbp - 8] 	; load Y
-	fsub			; y -Y
-	fld st0
-	fmul			; (y - Y)^2
+; calculate y(x)
+	fld QWORD [rbp - 24] 	; load A
+	fld QWORD [rbp - 48] 	; load x
+	fmul					; Ax
+	fld QWORD [rbp - 16]	; load B
+	fadd					; Ax + B
+	fld QWORD [rbp - 48]	; load x
+	fmul					; Ax^2 + Bx
+	fld QWORD [rbp - 8]		; load C
+	fadd					; Ax^2 + Bx + C
+	fld QWORD [rbp - 48]	; load x
+	fmul					; Ax^3 + Bx^2 + Cx
+	fld QWORD [rbp + 16]	; load D
+	fadd					; y(x) = Ax^3 + Bx^2 + Cx + D
+	fstp QWORD [rbp - 48]	;
+	mov r10, [rbp - 48]		; store y(x)
 
-loop_x:
-	mov rax, r10		; y
-	mul QWORD [rbp - 32]	; y * W (destroys RDX)
-	add rax, r11		; y * W + x
+; check if y(x) is in <-4; 4> range
+	cmp r10, 4				; if y(x) > 4
+	jg end
+	cmp -4, r10				; else if y(x) < -4
+	jg end
 
-	fld st0
-	mov[rbp - 40], r11
-	fild QWORD [rbp - 40]	; load x
-	fild QWORD [rbp - 16]	; load X
-	fsub			; x - X
-	fld st0
-	fmul			; (x - X)^2
-	fadd			; dx^2 + dy^2
-	fsqrt			; dist
-	mov QWORD [rbp - 40], 2
-	fild QWORD [rbp - 40]
-	fmul			; 2 * dist
-	fldpi
-	fmul			; 2 * PI * dist
-	fild QWORD [rbp + 16]
-	fdiv			; 2 * PI * dist / period
-	fsin			; sin
-	fld1
-	fadd			; sin + 1
-	mov QWORD [rbp - 40], 127
-	fild QWORD [rbp - 40]
-	fmul
-	fistp QWORD [rbp -40]
+; else: y(x) is in <-4; 4> - calculate pixel height
+	mov [rbp - 48], r10		;
+	fld QWORD [rbp - 48]	; load y(x)
+	mov QWORD [rbp - 48], 4	;
+	fld QWORD [rbp - 48]	; load 4
+	fadd					; y + 4
+	mov QWORD [rbp - 48], 8	;
+	fld QWORD [rbp - 48]	; load 8
+	fdiv					; (y + 4)/8
+	fld QWORD [rbp - 32]	; load H
+	fmul					; pix_y = (y + 4)/8 * H
+	fistp QWORD [rbp - 48]	; convert to int
+	mov r10, [rbp - 48]		; store pix_y
 
-	mov dl, [rbp - 40]
-	mov [rdi + rax + 4], dl
+; find pixel in buffer
+	mov rax, r10			; load pix_y to rax
+	mul QWORD [rbp - 32]	; pix_y * W
 
-	add r11, 1
-	cmp r11, rsi
-	jl loop_x
+; colour pixel
+	mov [rdi + rax + 4], 0xFF
 
-	fstp st0
-
-	add r10, 1
-	cmp r10, [rbp - 24]
-	jl loop_y
 end:
 	mov rsp, rbp
 	pop rbp
