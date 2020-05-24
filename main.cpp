@@ -4,7 +4,7 @@
 #include "f.hpp"
 
 // Image buffer
-const int H = 1024, W = 512, BPP = 4;
+const int H = 512, W = 256, BPP = 4;
 unsigned char *g_pBuffer;
 
 // Algorithm params
@@ -32,7 +32,7 @@ void refresh() {
 
 void redraw() {
 	refresh();
-	f( g_pBuffer, W, H, 0, 0, 0, -1, g_period );
+	std::cout << "f(-2) = " << f( g_pBuffer, W, H, 0, 0, 0, 2, g_period ) << std::endl;
 	glDrawPixels( W, H, GL_RGBA, GL_UNSIGNED_BYTE, g_pBuffer );
 	glutSwapBuffers();
 }
@@ -59,7 +59,6 @@ void keyboardCallback( unsigned char key, int x, int y ) {
 }
 
 int main( int argc, char *argv[] ) {
-	std::cout << sizeof( int );
 	g_pBuffer = new unsigned char[H * W * BPP];
 	glutInit( &argc, argv );
 	glutInitDisplayMode( GLUT_SINGLE );
