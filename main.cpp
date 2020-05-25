@@ -32,7 +32,7 @@ void refresh() {
 
 void redraw() {
 	refresh();
-	std::cout << "f(-2) = " << f( g_pBuffer, W, H, 0, 0, 0, 2, g_period ) << std::endl;
+	std::cout << "rax = " << f( g_pBuffer, W, H, 0, 0, 0, 2, g_period ) << std::endl;
 	glDrawPixels( W, H, GL_RGBA, GL_UNSIGNED_BYTE, g_pBuffer );
 	glutSwapBuffers();
 }
