@@ -117,6 +117,10 @@ void keyboardCallback( unsigned char key, int x, int y ) {
 }
 
 int main( int argc, char *argv[] ) {
+	if( argc == 1) {
+		std::cout << "Please specify background image file name. Shutting down..." << std::endl;
+		return -1;
+	}
 	openBackground( argv[1] );
 	glutInit( &argc, argv );
 	glutInitDisplayMode( GLUT_SINGLE );
