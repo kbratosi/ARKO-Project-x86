@@ -1,38 +1,66 @@
 #include <iostream>
 #include <fstream>
-#include <GL/glut.h> 	// sudo apt-get -y install freeglut3-dev
+#include <sstream>
+#include <cstring>
+#include <iomanip>
+#include <GL/glut.h>
+#include <iterator>
 #include "f.hpp"
 
 // Image buffer
-const int H = 512, W = 256, BPP = 4;
-unsigned char *g_pBuffer;
+const int BPP = 4;
+unsigned char *template_background, *g_pBuffer;
+int imageSize, W, H;
 
 // Algorithm params
-float g_period = 0.127;
+double g_A = 0,
+	   g_B = 0,
+	   g_C = 0,
+	   g_D = 1,
+	   g_S = 0.127;
 
 void refresh() {
-	for( int i = 0; i < H; ++i ) {
-		for( int j = 0; j < W; ++j ) {
-			g_pBuffer[4*i*W + 4*j] = 255;
-			g_pBuffer[4*i*W + 4*j + 1] = 255;
-			g_pBuffer[4*i*W + 4*j + 2] = 255;
-		}
+	memcpy( g_pBuffer, template_background, imageSize );
+}
+
+void openBackground(char* filename) {
+	FILE *inputFile;
+    inputFile = fopen( filename, "r" );
+	if(!inputFile)
+	{
+		fprintf( stderr, "Cannot open file!\n" );
+        return;
 	}
-	for( int j = 0; j < W; ++j ) {
-		g_pBuffer[4*W*(H/2) + 4*j] = 0;
-		g_pBuffer[4*W*(H/2) + 4*j + 1] = 0;
-		g_pBuffer[4*W*(H/2) + 4*j + 2] = 0;
+    int BM, fileSize, offset, headerSize;
+    fread(&BM,2,1,inputFile);
+    fread(&fileSize,4,1,inputFile);
+    fread(&offset,4,1,inputFile);
+    fread(&offset,4,1,inputFile);
+	fread(&headerSize,4,1,inputFile);
+	fread(&W,4,1,inputFile);
+	fread(&H,4,1,inputFile);
+    fclose(inputFile);
+
+	unsigned char header[offset];
+	imageSize = fileSize - offset;
+
+	template_background = new unsigned char[imageSize];
+	g_pBuffer = new unsigned char[imageSize];
+	inputFile = fopen( filename,"r" );
+	if(!inputFile)
+	{
+		fprintf( stderr, "Cannot open file!\n" );
+        return;
 	}
-	for( int j = 0; j < H; ++j ) {
-		g_pBuffer[4*W*j + 4*(W/2)] = 0;
-		g_pBuffer[4*W*j + 4*(W/2) + 1] = 0;
-		g_pBuffer[4*W*j + 4*(W/2) + 2] = 0;
-	}
+	fread(&header,offset, 1,inputFile);
+	fread(template_background, imageSize, 1, inputFile);
+	fclose(inputFile);
+	refresh();
 }
 
 void redraw() {
 	refresh();
-	std::cout << "rax = " << f( g_pBuffer, W, H, 0, 0, 0, 2, g_period ) << std::endl;
+	f( g_pBuffer, W, H, g_A, g_B, g_C, g_D, g_S );
 	glDrawPixels( W, H, GL_RGBA, GL_UNSIGNED_BYTE, g_pBuffer );
 	glutSwapBuffers();
 }
@@ -42,29 +70,60 @@ void displayCallback() {
 	std::cout << "displayCallback()" << std::endl;
 }
 
-void keyboardCallback( unsigned char key, int x, int y ) {
-	float period;
-	if( 'p' == key ) {
-		period = g_period - 0.005;
-	} else if ( 'P' == key ) {
-		period = g_period + 0.005;
-	}
-	if( ( period != g_period ) && ( period > 0.001 ) && ( period <= 0.252 ) ) {
-		g_period = period;
-	
-		redraw();
+void setNewTitle() {
+	std::stringstream ss;
+	ss << "A = " << std::fixed << std::setprecision(3) << g_A 
+	   << " B = " << g_B
+	   << " C = " << g_C 
+	   << " D = " << g_D 
+	   << ", S = " << g_S;
+	std::string params = ss.str();
+	char title[params.size() + 1];
+	strcpy( title, &params[0] );
+	glutSetWindowTitle( title );
+}
 
-		std::cout << "period(" << g_period << ")" << std::endl;
+void keyboardCallback( unsigned char key, int x, int y ) {
+	double s;
+	if( 'a' == key ) {
+		g_A -= 0.005;
+	} else if ( 'A' == key ) {
+		g_A += 0.005;
+	} else if( 'b' == key ) {
+		g_B -= 0.005;
+	} else if ( 'B' == key ) {
+		g_B += 0.005;
+	} else if( 'c' == key ) {
+		g_C -= 0.005;
+	} else if ( 'C' == key ) {
+		g_C += 0.005;
+	} else if( 'd' == key ) {
+		g_D -= 0.005;
+	} else if ( 'D' == key ) {
+		g_D += 0.005;
 	}
+	redraw();
+	if( 's' == key ) {
+		s = g_S - 0.005;
+	} else if ( 'S' == key ) {
+		s = g_S + 0.005;
+	}
+	if( ( s != g_S ) && ( s > 0.001 ) && ( s <= 0.252 ) ) {
+		g_S = s;
+		redraw();
+		std::cout << "period(" << g_S << ")" << std::endl;
+	}
+	setNewTitle();
 }
 
 int main( int argc, char *argv[] ) {
-	g_pBuffer = new unsigned char[H * W * BPP];
+	openBackground( argv[1] );
 	glutInit( &argc, argv );
 	glutInitDisplayMode( GLUT_SINGLE );
 	glutInitWindowSize( W, H );
 	glutInitWindowPosition( 100, 100 );
-	glutCreateWindow( "Example x86 64 " );
+	glutCreateWindow("Polynomial graphs");
+	setNewTitle();
 	glutDisplayFunc( displayCallback );
 	glutKeyboardFunc( keyboardCallback );
 	glutMainLoop();

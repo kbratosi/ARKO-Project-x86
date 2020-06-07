@@ -23,9 +23,6 @@ f:
 ; 		  [rbp - 64] - current x
 ;		  [rbp - 72] - tmp
 
-; counter
-	mov r9, 0
-
 ; load initial value to x
     mov r8, -2
 	cvtsi2sd xmm0, r8
@@ -80,7 +77,6 @@ loopSetup:
 	fstp QWORD [rbp - 72]
 	
 loop:
-	movsd xmm0, [rbp - 64]
 ; calculate dx(x) = S / sqrt( (3Ax^2 + 2Bx + C)^2 + 1 )
 	fld QWORD [rbp - 56]	; load S
 	fld QWORD [rbp - 64]	; load x
@@ -113,7 +109,7 @@ loop:
 	mov QWORD [rbp - 72], 2		;
 	fild QWORD [rbp - 72]		; load 2
 	fcomip ST0, ST1				; if( x >= 2 )
-	jna end
+	jbe end
 
 ; else: store new x in [rbp - 64]
 	fst QWORD [rbp - 64]
@@ -145,7 +141,6 @@ loop:
 
 ; else: y is in <-4; 4) - calculate pixel_x
 	fld QWORD [rbp - 64]		; load x
-
 	mov QWORD [rbp - 72], 2		;
 	fild QWORD [rbp - 72]		; load 2
 	fadd						; x + 2
@@ -154,11 +149,9 @@ loop:
 	fdiv						; (x + 2) / 4
 	fild QWORD [rbp - 8]		; load W
 	fmul						; pixel_x = (x + 2)/4 * W
-	fst QWORD [rbp - 72]
-	movsd xmm0, [rbp - 72]
 
 ; store pixel_x in r8	
-	fistp QWORD [rbp - 72]
+	fisttp QWORD [rbp - 72]
 	mov rcx, [rbp - 72]
 
 ; calculate pixel_y
@@ -170,7 +163,7 @@ loop:
 	fdiv					; (y + 4)/8
 	fild QWORD [rbp - 16]	; load H
 	fmul					; pixel_y = (y + 4)/8 * H
-	fistp QWORD [rbp - 72]	;
+	fisttp QWORD [rbp - 72]	;
 
 ; colour pixel( pixel_x, pixel_y )
 	mov rax, [rbp - 72]
@@ -182,7 +175,6 @@ loop:
 
 end:
 	fstp QWORD [rbp - 72]	; remove x from the stack
-	mov rax, rcx
 	mov rsp, rbp
 	pop rbp
 	ret
