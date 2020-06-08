@@ -16,7 +16,7 @@ int imageSize, W, H;
 double g_A = 0,
 	   g_B = 0,
 	   g_C = 0,
-	   g_D = 1,
+	   g_D = 0,
 	   g_S = 0.127;
 
 void refresh() {
